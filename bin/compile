@@ -43,6 +43,8 @@ print_environment
 echo "---> Installing JRE ${java_version}"
 install_java_webapp_runner "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
 
+echo "---> Java location: $(which java 2>&1 || echo 'NOT FOUND IN PATH')"
+echo "---> PATH: ${PATH}"
 
 get_geoserver "${BUILD_DIR}" "${CACHE_DIR}" "${geoserver_version}"
 
