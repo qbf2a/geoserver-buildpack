@@ -67,8 +67,19 @@ readonly geoserver_pid="${!}"
 if [ -n "${geoserver_pid}" ]
 then
     echo "---> Started temporary GeoServer on ${temp_host} (pid: ${geoserver_pid})"
-    curl --silent --retry 8 --retry-connrefused -4 \
-        "${temp_host}"
+
+    if ! curl --silent --fail --retry 8 --retry-connrefused --retry-delay 2 \
+        --connect-timeout 10 --max-time 30 -4 \
+        "${temp_host}" > /dev/null 2>&1; then
+        echo "!! GeoServer health check failed on ${temp_host}" >&2
+        echo "!! webapp-runner logs:" >&2
+        cat out.log >&2 2>/dev/null || true
+        if ! kill -0 "${geoserver_pid}" 2>/dev/null; then
+            wait "${geoserver_pid}" 2>/dev/null || true
+            echo "!! GeoServer process has exited (exit code: $?)" >&2
+        fi
+        exit 1
+    fi
 
     echo "---> Processing configuration templates"
     export_db_conn
@@ -125,6 +136,8 @@ then
     stop_geoserver "${geoserver_pid}"
 else
     echo "!! Unable to start temporary GeoServer. Aborting." >&2
+    echo "!! webapp-runner logs:" >&2
+    cat out.log >&2 2>/dev/null || true
     exit 1
 fi
 
