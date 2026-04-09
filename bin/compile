@@ -43,11 +43,14 @@ print_environment
 echo "---> Installing JRE ${java_version}"
 install_java_webapp_runner "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
 
-echo "---> Java location: $(which java 2>&1 || echo 'NOT FOUND IN PATH')"
-echo "---> PATH: ${PATH}"
-echo "---> Contents of export file: $(cat ./export 2>&1 || echo 'NO EXPORT FILE')"
-echo "---> .jdk exists: $(ls -la ${BUILD_DIR}/.jdk/bin/java 2>&1 || echo 'NO .jdk')"
-echo "---> Trying direct java: $(${BUILD_DIR}/.jdk/bin/java -version 2>&1 || echo 'FAILED')"
+# Ensure Java is in PATH. The java-war-buildpack installs OpenJDK in
+# ${BUILD_DIR}/.jdk but does not update the PATH when using a cached JDK.
+if [ -d "${BUILD_DIR}/.jdk/bin" ]; then
+    export JAVA_HOME="${BUILD_DIR}/.jdk"
+    export PATH="${JAVA_HOME}/bin:${PATH}"
+fi
+
+echo "---> Java: $(java -version 2>&1 | head -1)"
 
 get_geoserver "${BUILD_DIR}" "${CACHE_DIR}" "${geoserver_version}"
 
