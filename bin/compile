@@ -45,6 +45,9 @@ install_java_webapp_runner "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
 
 echo "---> Java location: $(which java 2>&1 || echo 'NOT FOUND IN PATH')"
 echo "---> PATH: ${PATH}"
+echo "---> Contents of export file: $(cat ./export 2>&1 || echo 'NO EXPORT FILE')"
+echo "---> .jdk exists: $(ls -la ${BUILD_DIR}/.jdk/bin/java 2>&1 || echo 'NO .jdk')"
+echo "---> Trying direct java: $(${BUILD_DIR}/.jdk/bin/java -version 2>&1 || echo 'FAILED')"
 
 get_geoserver "${BUILD_DIR}" "${CACHE_DIR}" "${geoserver_version}"
 
