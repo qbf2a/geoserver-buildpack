@@ -33,6 +33,10 @@
                 {
                     "@key": "passwd",
                     "$": "<%= ENV['DB_PASS'] %>"
+                },
+                {
+                    "@key": "schema",
+                    "$": "<%= ENV['GEOSERVER_DB_SCHEMA'] || 'public' %>"
                 }
             ]
         }
