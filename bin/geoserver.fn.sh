@@ -15,16 +15,43 @@ get_geoserver() {
     local url="https://sourceforge.net/projects/geoserver/files/GeoServer/${version}/${archive_name}"
     local zip_cache_file="${cache_dir}/geoserver-${version}.zip"
 
+    # Validate cached file before reusing it
+    if [ -f "${zip_cache_file}" ]; then
+        if ! unzip -tq "${zip_cache_file}" > /dev/null 2>&1; then
+            echo "!! Cached GeoServer ZIP is corrupted, re-downloading" >&2
+            rm -f "${zip_cache_file}"
+        fi
+    fi
+
     if [ ! -f "${zip_cache_file}" ] ; then
-        echo "Downloading GeoServer ${version}"
-        curl --retry 3 --silent --location "${url}" \
-            --output "${zip_cache_file}"
+        echo "---> Downloading GeoServer ${version}"
+        if ! curl --retry 3 --fail --show-error --location "${url}" \
+            --output "${zip_cache_file}"; then
+            echo "!! Failed to download GeoServer ${version} from ${url}" >&2
+            rm -f "${zip_cache_file}"
+            exit 1
+        fi
+
+        # Verify the downloaded file is a valid ZIP
+        if ! unzip -tq "${zip_cache_file}" > /dev/null 2>&1; then
+            echo "!! Downloaded GeoServer archive is not a valid ZIP file" >&2
+            echo "!! This may be caused by a SourceForge issue (HTML error page, incomplete download)" >&2
+            rm -f "${zip_cache_file}"
+            exit 1
+        fi
     else
         echo "---> Retrieving GeoServer ${version} from cache"
     fi
 
-    # Either we got geoserver zip from the cache of from the project page
+    # Either we got geoserver zip from the cache or from the project page
     unzip -qq -o "${zip_cache_file}" -d "${build_dir}/geoserver-${version}"
+
+    # Verify the WAR file was extracted
+    if [ ! -f "${build_dir}/geoserver-${version}/geoserver.war" ]; then
+        echo "!! GeoServer WAR file not found after extraction" >&2
+        echo "!! The ZIP archive may not contain the expected geoserver.war file" >&2
+        exit 1
+    fi
 
     # Ensure we have a working link to current war version in $build_dir/geoserver.war
     pushd "${build_dir}" > /dev/null \
@@ -46,6 +73,7 @@ run_geoserver() {
     port="${2}"
 
     # Starts the webserver in background (will be killed later)
+    # Logs are kept in out.log and dumped on failure for debugging
     java ${JAVA_OPTS:-} -jar "${build_dir}/webapp-runner.jar" \
         --port "${port}" \
         "${build_dir}/geoserver.war" \
